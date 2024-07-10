@@ -4,9 +4,10 @@ from spacy import displacy
 import docx2txt
 import PyPDF2
 from io import StringIO
-
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 # Load the spaCy model
-nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load("en_core_web_md")
 
 # Function to display entities
 def show_ents(doc):
@@ -39,7 +40,7 @@ def main():
 
     # Text input section
     st.header("NER on Text")
-    text = st.text_area("Enter text to analyze:", "When Sujith started working on machine learning at Google in 2025, few people outside of the company took him seriously.")
+    text = st.text_area("Enter text to analyze:", "When Sujith Santhosh started working on machine learning at Google in 2025, few people outside of the company took him seriously.")
 
     if st.button("Analyze Text"):
         doc = nlp(text)
