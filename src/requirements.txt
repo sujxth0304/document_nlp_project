@@ -1,0 +1,14 @@
+streamlit 
+transformers
+google-generativeai
+python-dotenv
+langchain
+PyPDF2
+faiss-cpu
+langchain_google_genai
+python-docx
+spacy
+docx2txt
+cupy-cuda111
+sentence-transformers
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.0.0/en_core_web_sm-3.0.0.tar.gz
