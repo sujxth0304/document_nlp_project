@@ -7,7 +7,7 @@ from io import StringIO
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 # Load the spaCy model
-nlp = spacy.load("en_core_web_md")
+nlp = spacy.load("en_core_web_sm")
 
 # Function to display entities
 def show_ents(doc):
