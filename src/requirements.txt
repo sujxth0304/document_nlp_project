@@ -11,7 +11,7 @@ spacy
 docx2txt
 cupy-cuda111
 sentence-transformers
-en_core_web_sm-3.7.1-py3-none-any.whl
+src/en_core_web_sm-3.7.1-py3-none-any.whl
 pymupdf
 nltk
 pyspellchecker
