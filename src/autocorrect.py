@@ -8,12 +8,17 @@ from spellchecker import SpellChecker
 from nltk.tokenize import sent_tokenize, word_tokenize
 import os
 
-# Download NLTK resources (if not already downloaded)
-nltk_data_path = os.path.join(os.getenv('APPDATA'), 'nltk_data')
+appdata_path = os.getenv('APPDATA')
+default_nltk_data_path = './nltk_data'  # Fallback path if APPDATA is not available
+
+if appdata_path:
+    nltk_data_path = os.path.join(appdata_path, 'nltk_data')
+else:
+    nltk_data_path = default_nltk_data_path
 
 if not os.path.exists(nltk_data_path):
-    nltk.download('punkt')
-    nltk.download('words')
+    nltk.download('punkt', download_dir=nltk_data_path)
+    nltk.download('words', download_dir=nltk_data_path)
 else:
     nltk.data.path.append(nltk_data_path)
 
