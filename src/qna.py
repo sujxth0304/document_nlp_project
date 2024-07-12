@@ -1,103 +1,97 @@
 import streamlit as st
-from PyPDF2 import PdfReader
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 from docx import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-import os
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-import google.generativeai as genai
-from langchain_community.vectorstores import FAISS
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains.question_answering import load_qa_chain
-from langchain.prompts import PromptTemplate
-from dotenv import load_dotenv
+import string
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+import numpy as np
 
-load_dotenv()
+# Download necessary NLTK resources
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+# Function to preprocess text
+def preprocess_text(text):
+    text = text.lower()
+    text = text.translate(str.maketrans('', '', string.punctuation))
+    words = word_tokenize(text)
+    stop_words = set(stopwords.words('english'))
+    words = [word for word in words if word not in stop_words]
+    lemmatizer = WordNetLemmatizer()
+    words = [lemmatizer.lemmatize(word) for word in words]
+    preprocessed_text = ' '.join(words)
+    return preprocessed_text
 
-def get_pdf_text(pdf):
+# Function to read text from DOCX file
+def read_docx(file_path):
+    doc = Document(file_path)
     text = ""
-    pdf_reader = PdfReader(pdf)
-    for page in pdf_reader.pages:
-        text += page.extract_text()
-    return text
-
-def get_word_text(docx):
-    text = ""
-    doc = Document(docx)
     for paragraph in doc.paragraphs:
         text += paragraph.text + "\n"
     return text
 
-def get_text_chunks(text):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
-    chunks = text_splitter.split_text(text)
-    return chunks
+# Load uploaded resumes
+def load_uploaded_resumes(uploaded_files):
+    resumes = {}
+    for file in uploaded_files:
+        if file.name.endswith(".docx"):
+            resumes[file.name] = read_docx(file)
+    return resumes
 
-def get_vector_store(text_chunks):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-    vector_store.save_local("faiss_index")
-    return vector_store
+# Simple relevance scoring function (example)
+def calculate_relevance_scores(job_description, resumes):
+    vectorizer = TfidfVectorizer(stop_words='english')
+    corpus = [preprocess_text(job_description)] + [preprocess_text(resume) for resume in resumes.values()]
+    X = vectorizer.fit_transform(corpus)
+    job_vec = X[0]  # TF-IDF vector for job description
+    resume_vecs = X[1:]  # TF-IDF vectors for resumes
 
-def get_conversational_chain():
-    prompt_template = """
-    Answer the question as detailed as possible from the provided context, make sure to provide all the details, if the answer is not in the provided context just say "answer is not available in the context", don't provide the wrong answer \n\n
-    Context:\n{context}?\n
-    Question:\n{question}\n
+    # Calculate cosine similarity
+    cosine_similarities = cosine_similarity(job_vec, resume_vecs).flatten()
+    return cosine_similarities
 
-    Answer:
-    """
-
-    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.6)
-    prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-
-    chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
-    return chain
-
-def user_input(user_question):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-
-    # Ensure the FAISS index file exists
-    if not os.path.exists("faiss_index/index.faiss"):
-        st.error("FAISS index file not found. Please process the documents first.")
-        return
-
-    # Set allow_dangerous_deserialization to True
-    new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-    docs = new_db.similarity_search(user_question)
-
-    chain = get_conversational_chain()
-    response = chain(
-        {"input_documents": docs, "question": user_question}, return_only_outputs=True)
-    print(response)
-    st.write("Reply: ", response["output_text"])
-
+# Streamlit app
 def main():
-    st.set_page_config(page_title="Chat with Document")
-    st.header("Chat with Docs")
+    st.set_page_config(page_title="Job Description to Resume Predictor")
+    st.header("Job Description to Resume Predictor")
 
-    user_question = st.text_input("Ask a question from the doc files")
+    # File upload UI
+    uploaded_files = st.file_uploader("Upload your resumes", type=['docx'], accept_multiple_files=True)
 
-    if user_question:
-        user_input(user_question)
-    with st.sidebar:
-        st.title("Menu:")
-        uploaded_files = st.file_uploader("Upload your PDF or Word files and click on the submit button", accept_multiple_files=True, type=['pdf', 'docx'])
-        if st.button("Submit & Process"):
-            if uploaded_files:
-                with st.spinner("Processing..."):
-                    raw_text = ""
-                    for uploaded_file in uploaded_files:
-                        if uploaded_file.name.endswith(".pdf"):
-                            raw_text += get_pdf_text(uploaded_file)
-                        elif uploaded_file.name.endswith(".docx"):
-                            raw_text += get_word_text(uploaded_file)
-                    text_chunks = get_text_chunks(raw_text)
-                    get_vector_store(text_chunks)
-                    st.success("Done")
+    # Load uploaded resumes
+    if uploaded_files:
+        resumes = load_uploaded_resumes(uploaded_files)
+
+        # Display uploaded resumes
+        if resumes:
+            st.subheader("Uploaded Resumes:")
+            for filename, content in resumes.items():
+                st.write(f"**{filename}**")
+                st.write(content)
+        else:
+            st.write("No resumes uploaded yet.")
+
+        # Job description input
+        job_description = st.text_area("Enter job description")
+
+        # Calculate relevance scores and recommend the best resume
+        if job_description and resumes:
+            relevance_scores = calculate_relevance_scores(job_description, resumes)
+            
+            if np.all(relevance_scores == 0):
+                st.write("No relevant files.")
             else:
-                st.error("Please upload PDF or Word files first.")
+                # Rank resumes based on scores
+                sorted_resumes = sorted(zip(relevance_scores, resumes.keys()), reverse=True)
+                
+                # Display ranked resumes
+                st.subheader("Ranked Resumes:")
+                for score, filename in sorted_resumes:
+                    st.write(f"Resume: {filename}, Score: {score}")
 
 if __name__ == "__main__":
     main()
