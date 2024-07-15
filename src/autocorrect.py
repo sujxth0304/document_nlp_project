@@ -8,6 +8,7 @@ from spellchecker import SpellChecker
 from nltk.tokenize import sent_tokenize, word_tokenize
 import os
 
+# Set up nltk data path
 appdata_path = os.getenv('APPDATA')
 default_nltk_data_path = './nltk_data'  # Fallback path if APPDATA is not available
 
@@ -24,29 +25,25 @@ else:
 
 def sentences_to_words_list(file_path):
     try:
-        # Read the entire file
         with open(file_path, 'r', encoding='utf-8') as file:
             text = file.read()
 
-        # Tokenize into sentences
         sentences = sent_tokenize(text)
-
-        # Tokenize each sentence into words and store in a list
         words_list = []
         for sentence in sentences:
             words = word_tokenize(sentence)
             words_list.extend(words)
 
         return words_list
-    
     except Exception as e:
-        print(f"Error reading or tokenizing file: {e}")
+        st.error(f"Error reading or tokenizing file: {e}")
         return None
-    
-file_path = 'src/shakespeare.txt'  # Replace with your file path
+
+# Replace with your file path
+file_path = 'src/shakespeare.txt'  
 words_list = sentences_to_words_list(file_path)
 
-# Initialize the spell checker and text-generation pipeline for text correction
+# Initialize spell checker and text-generation pipeline
 spell = SpellChecker()
 corrector = pipeline("text2text-generation", "pszemraj/bart-base-grammar-synthesis")
 
@@ -74,18 +71,17 @@ def extract_text_from_file(file):
                 text += paragraph.text + "\n"
             return text
         else:
-            return None  # Indicate unsupported format
+            return None
     except Exception as e:
         st.error(f"Error extracting text: {e}")
         return None
-    
+
 def underline_misspelled(text, words_list):
     words = text.split()
     english_words = set(nltk_words.words())
     underlined_text = []
 
     for word in words:
-        # Check if the word is in NLTK English words or is misspelled
         if word.lower() in english_words or word.lower() in spell or word.lower() in words_list:
             underlined_text.append(word)
         else:
@@ -98,34 +94,29 @@ def main():
     st.markdown("<h4><i>It may take some time depending on the size of the document</i></h4>", unsafe_allow_html=True)
 
     uploaded_files = st.file_uploader("Upload Files:", accept_multiple_files=True)
-    
-    # Initialize an empty words_list
-    words_list = []
 
-    # Process each uploaded file
     for uploaded_file in uploaded_files:
-        st.write("filename:", uploaded_file.name)
+        st.write("filename:", uploaded_file.name)  # Added logging for uploaded file names
         extracted_text = extract_text_from_file(uploaded_file)
         
         if extracted_text is not None:
             paragraphs = extracted_text.split('\n')
             corrected_paragraphs = []
             underlined_paragraphs = []
-            my_bar = st.progress(0)  # Initialize progress bar
+            my_bar = st.progress(0)
             total_paragraphs = len(paragraphs)
 
             for i, paragraph in enumerate(paragraphs):
-                if paragraph.strip():  # Only process non-empty paragraphs
+                if paragraph.strip():
                     corrected_paragraph = correct_text(paragraph)
                     corrected_paragraphs.append(corrected_paragraph)
                     underlined_paragraph = underline_misspelled(paragraph, words_list)
                     underlined_paragraphs.append(underlined_paragraph)
-
                 else:
                     corrected_paragraphs.append(paragraph)
                     underlined_paragraphs.append(paragraph)
 
-                my_bar.progress((i + 1) / total_paragraphs)  # Update progress
+                my_bar.progress((i + 1) / total_paragraphs)
 
             corrected_text = '\n'.join(corrected_paragraphs)
             underlined_text = '\n'.join(underlined_paragraphs)
@@ -135,7 +126,6 @@ def main():
 
             st.markdown("<h2>Text with underlined errors:</h2>", unsafe_allow_html=True)
             st.markdown(underlined_text, unsafe_allow_html=True)
-            # Add a download button for the corrected text
             st.download_button(
                 label="Download Corrected Text",
                 data=corrected_text,
