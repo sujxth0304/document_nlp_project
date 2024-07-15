@@ -11,7 +11,7 @@ def main():
         autocorrect_image = st.image('src/autocorrect_icon.png', width=100)
         autocorrect_button = st.button("Go to Autocorrection")
         if autocorrect_button:
-            js_code = f"window.open('https://autocorrectpy-fzgsa27bt5tqd2dnf3tddj.streamlit.app/', '_blank')"
+            js_code = f"window.open('https://autocorrect.streamlit.app/', '_blank')"
             st.components.v1.html(f'<script>{js_code}</script>')
 
     with col2:
@@ -19,7 +19,7 @@ def main():
         ner_image = st.image('src/ner_icon.png', width=100)
         ner_button = st.button("Go to NER")
         if ner_button:
-            js_code = f"window.open('https://j72xxgcgnnnjxeappfxr5xj.streamlit.app/', '_blank')"
+            js_code = f"window.open('https://entityrecognition.streamlit.app/', '_blank')"
             st.components.v1.html(f'<script>{js_code}</script>')
 
     with col3:
@@ -27,7 +27,7 @@ def main():
         qna_image = st.image('src/pdf_icon.png', width=100)
         qna_button = st.button("Go to QnA")
         if qna_button:
-            js_code = f"window.open('https://ibwnkoqu6quz3jzbsp4tab.streamlit.app/', '_blank')"
+            js_code = f"window.open('https://documentprompt.streamlit.app/', '_blank')"
             st.components.v1.html(f'<script>{js_code}</script>')
 
 if __name__ == '__main__':
