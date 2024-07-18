@@ -56,11 +56,11 @@ def calculate_relevance_scores(job_description, resumes):
 
 # Streamlit app
 def main():
-    st.set_page_config(page_title="Job Description to Resume Predictor")
-    st.header("Job Description to Resume Predictor")
+    st.set_page_config(page_title="DOCU-MATE QnA")
+    st.header("DOCU-MATE QnA")
 
     # File upload UI
-    uploaded_files = st.file_uploader("Upload your resumes", type=['docx'], accept_multiple_files=True)
+    uploaded_files = st.file_uploader("Upload your files", type=['docx'], accept_multiple_files=True)
 
     # Load uploaded resumes
     if uploaded_files:
@@ -68,15 +68,15 @@ def main():
 
         # Display uploaded resumes
         if resumes:
-            st.subheader("Uploaded Resumes:")
+            st.subheader("Uploaded files:")
             for filename, content in resumes.items():
                 st.write(f"**{filename}**")
                 st.write(content)
         else:
-            st.write("No resumes uploaded yet.")
+            st.write("No files uploaded yet.")
 
         # Job description input
-        job_description = st.text_area("Enter job description")
+        job_description = st.text_area("Enter description")
 
         # Calculate relevance scores and recommend the best resume
         if job_description and resumes:
