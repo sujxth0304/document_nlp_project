@@ -8,6 +8,7 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 import numpy as np
+import pandas as pd
 
 # Download necessary NLTK resources
 nltk.download('punkt')
@@ -34,6 +35,13 @@ def read_docx(file_path):
         text += paragraph.text + "\n"
     return text
 
+# Function to extract skills from text (simple keyword-based approach)
+def extract_skills(text):
+    # Define a list of skills (this can be extended or customized)
+    skills = ['python', 'java', 'machine learning', 'data analysis', 'deep learning', 'sql', 'nlp']
+    text = preprocess_text(text)
+    return [skill for skill in skills if skill in text]
+
 # Load uploaded resumes
 def load_uploaded_resumes(uploaded_files):
     resumes = {}
@@ -42,7 +50,7 @@ def load_uploaded_resumes(uploaded_files):
             resumes[file.name] = read_docx(file)
     return resumes
 
-# Simple relevance scoring function (example)
+# Simple relevance scoring function
 def calculate_relevance_scores(job_description, resumes):
     vectorizer = TfidfVectorizer(stop_words='english')
     corpus = [preprocess_text(job_description)] + [preprocess_text(resume) for resume in resumes.values()]
@@ -56,11 +64,11 @@ def calculate_relevance_scores(job_description, resumes):
 
 # Streamlit app
 def main():
-    st.set_page_config(page_title="DOCU-MATE QnA")
-    st.header("DOCU-MATE QnA")
+    st.set_page_config(page_title="Job Description to Resume Predictor")
+    st.header("Job Description to Resume Predictor")
 
     # File upload UI
-    uploaded_files = st.file_uploader("Upload your files", type=['docx'], accept_multiple_files=True)
+    uploaded_files = st.file_uploader("Upload your resumes", type=['docx'], accept_multiple_files=True)
 
     # Load uploaded resumes
     if uploaded_files:
@@ -68,15 +76,15 @@ def main():
 
         # Display uploaded resumes
         if resumes:
-            st.subheader("Uploaded files:")
+            st.subheader("Uploaded Resumes:")
             for filename, content in resumes.items():
                 st.write(f"**{filename}**")
                 st.write(content)
         else:
-            st.write("No files uploaded yet.")
+            st.write("No resumes uploaded yet.")
 
         # Job description input
-        job_description = st.text_area("Enter description")
+        job_description = st.text_area("Enter job description")
 
         # Calculate relevance scores and recommend the best resume
         if job_description and resumes:
@@ -85,13 +93,41 @@ def main():
             if np.all(relevance_scores == 0):
                 st.write("No relevant files.")
             else:
+                # Determine the highest relevance score
+                highest_score = np.max(relevance_scores)
+                
+                # Set a threshold based on the highest score (e.g., 70% of the highest score)
+                threshold = 0.7 * highest_score
+
+                # Extract skills from the job description
+                job_skills = extract_skills(job_description)
+
                 # Rank resumes based on scores
                 sorted_resumes = sorted(zip(relevance_scores, resumes.keys()), reverse=True)
                 
-                # Display ranked resumes
-                st.subheader("Ranked Resumes:")
+                # Create a DataFrame to store results
+                results = []
                 for score, filename in sorted_resumes:
-                    st.write(f"Resume: {filename}, Score: {score}")
+                    match_status = 'Match' if score >= threshold else 'No Match'
+                    # Check if resume mentions at least one skill from the job description
+                    resume_skills = extract_skills(resumes[filename])
+                    if match_status == 'No Match' and any(skill in job_skills for skill in resume_skills):
+                        match_status = 'Partial Match'
+                    results.append({'Resume': filename, 'Score': score, 'Match Status': match_status})
+
+                results_df = pd.DataFrame(results)
+
+                # Define a function for conditional formatting
+                def color_match(val):
+                    color = '#A1DE93' if val == 'Match' else '#70A1D7' if val == 'Partial Match' else '#F47C7C'
+                    return f'background-color: {color}'
+
+                # Apply the conditional formatting
+                styled_df = results_df.style.applymap(color_match, subset=['Match Status'])
+
+                # Display the results
+                st.subheader('Resume Matching Results')
+                st.dataframe(styled_df, width = 1000)
 
 if __name__ == "__main__":
     main()
